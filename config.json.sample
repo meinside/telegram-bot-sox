@@ -1,0 +1,14 @@
+{
+	"sox_bin": "/usr/local/bin/sox",
+	"sox_presets": {
+		"slow_and_low_pitch": ["speed", "0.8", "pitch", "-200", "band", "1.2k", "1.5k"],
+		"fast_and_high_pitch": ["speed", "1.2", "pitch", "200", "band", "1.2k", "1.5k"]
+	},
+	"api_token": "0123456789:abcdefghijklmnopqrstuvwxyz",
+	"available_ids": [
+		"telegram_id1",
+		"telegram_id2"
+	],
+	"monitor_interval": 3,
+	"is_verbose": true
+}

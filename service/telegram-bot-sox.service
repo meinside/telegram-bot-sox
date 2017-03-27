@@ -1,0 +1,17 @@
+[Unit]
+Description=Telegram Bot for SoX
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+User=some_user
+Group=some_user
+WorkingDirectory=/path/to/telegram-bot-sox
+ExecStart=/path/to/telegram-bot-sox/telegram-bot-sox
+Restart=always
+RestartSec=5
+Environment=
+
+[Install]
+WantedBy=multi-user.target
