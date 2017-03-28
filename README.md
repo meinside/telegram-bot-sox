@@ -54,6 +54,8 @@ This is mine:
 }
 ```
 
+If you want to add more presets, read [this manual](http://sox.sourceforge.net/sox.html).
+
 ## 3. Run
 
 Just run it:
@@ -102,6 +104,8 @@ $ sudo launchctl load /Library/LaunchDaemons/telegram-bot-sox.plist
 ```
 
 #### Linux (systemd)
+
+Copy sample .service file:
 
 ```bash
 $ sudo cp service/telegram-bot-sox.service /lib/systemd/system/
