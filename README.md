@@ -34,6 +34,26 @@ $ cp config.json.sample config.json
 $ vi config.json
 ```
 
+and change values to yours.
+
+This is mine:
+
+```json
+{
+	"sox_bin": "/usr/bin/sox",
+	"sox_presets": {
+		"slow_and_low_pitch": ["speed", "0.6", "pitch", "-200", "band", "1.1k", "1.6k"],
+		"fast_and_high_pitch": ["speed", "1.6", "pitch", "200", "band", "1.1k", "1.6k"]
+	},
+	"api_token": "<REDACTED>",
+	"available_ids": [
+		"my_telegram_id"
+	],
+	"monitor_interval": 1,
+	"is_verbose": false
+}
+```
+
 ## 3. Run
 
 Just run it:
@@ -44,7 +64,7 @@ $ ./telegram-bot-sox
 
 ### Run as a service
 
-If you run it as a service,
+If you want to run it as a service,
 
 #### macOS (launchd)
 
