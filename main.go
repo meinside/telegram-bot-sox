@@ -149,7 +149,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 	// check username
 	var userId string
 	if update.Message.From.Username == nil {
-		log.Printf("*** Not allowed (no user name): %s", *update.Message.From.FirstName)
+		log.Printf("*** Not allowed (no user name): %s", update.Message.From.FirstName)
 		return false
 	}
 	userId = *update.Message.From.Username
@@ -206,7 +206,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 				log.Printf("*** Voice synthesis failed: %s", err)
 
 				message = fmt.Sprintf("Failed to synthesize voice: %s", err.Error())
-				b.SendMessage(update.Message.Chat.Id, &message, options)
+				b.SendMessage(update.Message.Chat.Id, message, options)
 			}
 		} else {
 			switch {
@@ -238,7 +238,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 			}
 
 			// send message
-			if sent := b.SendMessage(update.Message.Chat.Id, &message, options); sent.Ok {
+			if sent := b.SendMessage(update.Message.Chat.Id, message, options); sent.Ok {
 				result = true
 			} else {
 				log.Printf("*** Failed to send message: %s", *sent.Description)
@@ -283,7 +283,7 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 	} else if strings.HasPrefix(txt, CommandCancel) {
 		message = MessageCanceled
 	} else {
-		log.Printf("*** Unprocessable callback query: %s\n", txt)
+		log.Printf("*** Unprocessable callback query: %s", txt)
 	}
 
 	if len(message) > 0 {
@@ -294,13 +294,13 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 				"chat_id":    query.Message.Chat.Id,
 				"message_id": query.Message.MessageId,
 			}
-			if apiResult := b.EditMessageText(&message, options); apiResult.Ok {
+			if apiResult := b.EditMessageText(message, options); apiResult.Ok {
 				result = true
 			} else {
-				log.Printf("*** Failed to edit message text: %s\n", *apiResult.Description)
+				log.Printf("*** Failed to edit message text: %s", *apiResult.Description)
 			}
 		} else {
-			log.Printf("*** Failed to answer callback query: %+v\n", query)
+			log.Printf("*** Failed to answer callback query: %+v", query)
 		}
 	}
 
@@ -308,7 +308,7 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 }
 
 // synthesize voice from given file_id
-func synthesizeVoiceWithFileId(b *bot.Bot, fileId *string, preset string) ([]byte, error) {
+func synthesizeVoiceWithFileId(b *bot.Bot, fileId string, preset string) ([]byte, error) {
 	if f := b.GetFile(fileId); f.Ok {
 		if res, err := http.Get(b.GetFileUrl(*f.Result)); err == nil {
 			defer res.Body.Close()
@@ -364,7 +364,7 @@ func main() {
 
 	// get info about this bot
 	if me := client.GetMe(); me.Ok {
-		log.Printf("Launching bot: @%s (%s)", *me.Result.Username, *me.Result.FirstName)
+		log.Printf("Launching bot: @%s (%s)", *me.Result.Username, me.Result.FirstName)
 
 		// delete webhook (getting updates will not work when wehbook is set up)
 		if unhooked := client.DeleteWebhook(); unhooked.Ok {
