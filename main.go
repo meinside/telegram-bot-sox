@@ -197,7 +197,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 				}
 
 				// upload voice
-				if sent := b.SendVoiceWithBytes(update.Message.Chat.Id, data, options); sent.Ok {
+				if sent := b.SendVoice(update.Message.Chat.Id, data, options); sent.Ok {
 					result = true
 				} else {
 					log.Printf("*** Failed to send photo: %s", *sent.Description)
