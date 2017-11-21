@@ -19,39 +19,39 @@ import (
 
 const (
 	// for monitoring
-	DefaultMonitorIntervalSeconds = 3
+	defaultMonitorIntervalSeconds = 3
 
 	// commands
-	CommandStart        = "/start"
-	CommandPreset       = "/preset"
-	CommandChangePreset = "/presetchange"
-	CommandHelp         = "/help"
-	CommandCancel       = "/cancel"
+	commandStart        = "/start"
+	commandPreset       = "/preset"
+	commandChangePreset = "/presetchange"
+	commandHelp         = "/help"
+	commandCancel       = "/cancel"
 
 	// messages
-	MessageDefault          = "Record your voice to start."
-	MessageSelectPreset     = "Select a preset."
-	MessageNoPreset         = "No preset available."
-	MessageNoMatchingPreset = "No such preset"
-	MessagePresetChanged    = "Applied preset"
-	MessagePresetNotSet     = "Preset not set"
-	MessageUnknownCommand   = "Unknown command"
-	MessageCancel           = "Cancel"
-	MessageCanceled         = "Canceled."
+	messageDefault          = "Record your voice to start."
+	messageSelectPreset     = "Select a preset."
+	messageNoPreset         = "No preset available."
+	messageNoMatchingPreset = "No such preset"
+	messagePresetChanged    = "Applied preset"
+	messagePresetNotSet     = "Preset not set"
+	messageUnknownCommand   = "Unknown command"
+	messageCancel           = "Cancel"
+	messageCanceled         = "Canceled."
 )
 
-type Session struct {
+type session struct {
 	UserId         string
 	SelectedPreset string
 }
 
-type SessionPool struct {
-	Sessions map[string]Session
+type sessionPool struct {
+	Sessions map[string]session
 	sync.Mutex
 }
 
 const (
-	ConfigFilename = "config.json"
+	configFilename = "config.json"
 )
 
 // variables
@@ -62,11 +62,11 @@ var apiToken string
 var monitorInterval int
 var isVerbose bool
 var availableIds []string
-var pool SessionPool
+var pool sessionPool
 
 // keyboards
 var allKeyboards = [][]bot.KeyboardButton{
-	bot.NewKeyboardButtons(CommandPreset, CommandHelp),
+	bot.NewKeyboardButtons(commandPreset, commandHelp),
 }
 
 // struct for config file
@@ -83,7 +83,7 @@ type config struct {
 func getConfig() (cfg config, err error) {
 	_, filename, _, _ := runtime.Caller(0) // = __FILE__
 
-	if file, err := ioutil.ReadFile(filepath.Join(path.Dir(filename), ConfigFilename)); err == nil {
+	if file, err := ioutil.ReadFile(filepath.Join(path.Dir(filename), configFilename)); err == nil {
 		var conf config
 		if err := json.Unmarshal(file, &conf); err == nil {
 			return conf, nil
@@ -105,18 +105,18 @@ func init() {
 		availableIds = cfg.AvailableIds
 		monitorInterval = cfg.MonitorInterval
 		if monitorInterval <= 0 {
-			monitorInterval = DefaultMonitorIntervalSeconds
+			monitorInterval = defaultMonitorIntervalSeconds
 		}
 		isVerbose = cfg.IsVerbose
 
 		// initialize variables
-		sessions := make(map[string]Session)
+		sessions := make(map[string]session)
 		for _, v := range availableIds {
-			sessions[v] = Session{
+			sessions[v] = session{
 				UserId: v,
 			}
 		}
-		pool = SessionPool{
+		pool = sessionPool{
 			Sessions: sessions,
 		}
 	} else {
@@ -172,7 +172,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		}
 
 		var message string
-		var options map[string]interface{} = map[string]interface{}{
+		var options = map[string]interface{}{
 			"reply_markup": bot.ReplyKeyboardMarkup{
 				Keyboard:       allKeyboards,
 				ResizeKeyboard: true,
@@ -193,11 +193,11 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 				if len(session.SelectedPreset) > 0 {
 					options["caption"] = fmt.Sprintf("%s (%s)", session.SelectedPreset, strings.Join(soxPresets[session.SelectedPreset], " "))
 				} else {
-					options["caption"] = MessagePresetNotSet
+					options["caption"] = messagePresetNotSet
 				}
 
 				// upload voice
-				if sent := b.SendVoice(update.Message.Chat.Id, data, options); sent.Ok {
+				if sent := b.SendVoice(update.Message.Chat.Id, bot.InputFileFromBytes(data), options); sent.Ok {
 					result = true
 				} else {
 					log.Printf("*** Failed to send photo: %s", *sent.Description)
@@ -211,30 +211,30 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		} else {
 			switch {
 			// start
-			case strings.HasPrefix(txt, CommandStart):
-				message = MessageDefault
-			case strings.HasPrefix(txt, CommandPreset):
+			case strings.HasPrefix(txt, commandStart):
+				message = messageDefault
+			case strings.HasPrefix(txt, commandPreset):
 				if len(soxPresets) > 0 {
-					message = MessageSelectPreset
+					message = messageSelectPreset
 
 					keys := map[string]string{}
-					for k, _ := range soxPresets {
-						keys[k] = fmt.Sprintf("%s %s", CommandChangePreset, k)
+					for k := range soxPresets {
+						keys[k] = fmt.Sprintf("%s %s", commandChangePreset, k)
 					}
-					keys[MessageCancel] = CommandCancel
+					keys[messageCancel] = commandCancel
 
 					options["reply_markup"] = bot.InlineKeyboardMarkup{
 						InlineKeyboard: bot.NewInlineKeyboardButtonsAsRowsWithCallbackData(keys),
 					}
 				} else {
-					message = MessageNoPreset
+					message = messageNoPreset
 				}
 			// help
-			case strings.HasPrefix(txt, CommandHelp):
+			case strings.HasPrefix(txt, commandHelp):
 				message = getHelp()
 			// fallback
 			default:
-				message = fmt.Sprintf("%s: %s", MessageUnknownCommand, txt)
+				message = fmt.Sprintf("%s: %s", messageUnknownCommand, txt)
 			}
 
 			// send message
@@ -260,9 +260,9 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 	// process result
 	result := false
 
-	var message string = ""
-	if strings.HasPrefix(txt, CommandChangePreset) {
-		preset := strings.TrimSpace(strings.TrimPrefix(txt, CommandChangePreset))
+	var message string
+	if strings.HasPrefix(txt, commandChangePreset) {
+		preset := strings.TrimSpace(strings.TrimPrefix(txt, commandChangePreset))
 
 		if _, exists := soxPresets[preset]; exists {
 			userId := *query.From.Username
@@ -270,18 +270,18 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 				log.Printf("*** Id not allowed: %s", userId)
 			} else {
 				// change preset
-				pool.Sessions[userId] = Session{
+				pool.Sessions[userId] = session{
 					UserId:         userId,
 					SelectedPreset: preset,
 				}
 
-				message = fmt.Sprintf("%s: %s", MessagePresetChanged, preset)
+				message = fmt.Sprintf("%s: %s", messagePresetChanged, preset)
 			}
 		} else {
-			message = fmt.Sprintf("%s: %s", MessageNoMatchingPreset, preset)
+			message = fmt.Sprintf("%s: %s", messageNoMatchingPreset, preset)
 		}
-	} else if strings.HasPrefix(txt, CommandCancel) {
-		message = MessageCanceled
+	} else if strings.HasPrefix(txt, commandCancel) {
+		message = messageCanceled
 	} else {
 		log.Printf("*** Unprocessable callback query: %s", txt)
 	}
