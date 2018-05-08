@@ -41,7 +41,7 @@ const (
 )
 
 type session struct {
-	UserId         string
+	UserID         string
 	SelectedPreset string
 }
 
@@ -73,7 +73,7 @@ var allKeyboards = [][]bot.KeyboardButton{
 type config struct {
 	SoxBinPath       string              `json:"sox_bin"`
 	SoxPresetOptions map[string][]string `json:"sox_presets"`
-	ApiToken         string              `json:"api_token"`
+	APIToken         string              `json:"api_token"`
 	AvailableIds     []string            `json:"available_ids"`
 	MonitorInterval  int                 `json:"monitor_interval"`
 	IsVerbose        bool                `json:"is_verbose"`
@@ -83,16 +83,18 @@ type config struct {
 func getConfig() (cfg config, err error) {
 	_, filename, _, _ := runtime.Caller(0) // = __FILE__
 
-	if file, err := ioutil.ReadFile(filepath.Join(path.Dir(filename), configFilename)); err == nil {
+	file, err := ioutil.ReadFile(filepath.Join(path.Dir(filename), configFilename))
+	if err == nil {
 		var conf config
-		if err := json.Unmarshal(file, &conf); err == nil {
+
+		err := json.Unmarshal(file, &conf)
+		if err == nil {
 			return conf, nil
-		} else {
-			return config{}, err
 		}
-	} else {
+
 		return config{}, err
 	}
+	return config{}, err
 }
 
 // initialization
@@ -101,7 +103,7 @@ func init() {
 	if cfg, err := getConfig(); err == nil {
 		soxPath = cfg.SoxBinPath
 		soxPresets = cfg.SoxPresetOptions
-		apiToken = cfg.ApiToken
+		apiToken = cfg.APIToken
 		availableIds = cfg.AvailableIds
 		monitorInterval = cfg.MonitorInterval
 		if monitorInterval <= 0 {
@@ -113,7 +115,7 @@ func init() {
 		sessions := make(map[string]session)
 		for _, v := range availableIds {
 			sessions[v] = session{
-				UserId: v,
+				UserID: v,
 			}
 		}
 		pool = sessionPool{
@@ -125,7 +127,7 @@ func init() {
 }
 
 // check if given Telegram id is available
-func isAvailableId(id string) bool {
+func isAvailableID(id string) bool {
 	for _, v := range availableIds {
 		if v == id {
 			return true
@@ -147,14 +149,14 @@ Following commands are supported:
 // process incoming update from Telegram
 func processUpdate(b *bot.Bot, update bot.Update) bool {
 	// check username
-	var userId string
+	var userID string
 	if update.Message.From.Username == nil {
 		log.Printf("*** Not allowed (no user name): %s", update.Message.From.FirstName)
 		return false
 	}
-	userId = *update.Message.From.Username
-	if !isAvailableId(userId) {
-		log.Printf("*** Id not allowed: %s", userId)
+	userID = *update.Message.From.Username
+	if !isAvailableID(userID) {
+		log.Printf("*** Id not allowed: %s", userID)
 		return false
 	}
 
@@ -162,7 +164,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 	result := false
 
 	pool.Lock()
-	if session, exists := pool.Sessions[userId]; exists {
+	if session, exists := pool.Sessions[userID]; exists {
 		// text from message
 		var txt string
 		if update.Message.HasText() {
@@ -182,12 +184,12 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 
 		if update.Message.HasVoice() {
 			// recording voice...
-			b.SendChatAction(update.Message.Chat.Id, bot.ChatActionRecordAudio)
+			b.SendChatAction(update.Message.Chat.ID, bot.ChatActionRecordAudio)
 
 			// send synthesized voice
-			if data, err := synthesizeVoiceWithFileId(b, update.Message.Voice.FileId, session.SelectedPreset); err == nil {
+			if data, err := synthesizeVoiceWithFileID(b, update.Message.Voice.FileID, session.SelectedPreset); err == nil {
 				// uploading voice...
-				b.SendChatAction(update.Message.Chat.Id, bot.ChatActionUploadAudio)
+				b.SendChatAction(update.Message.Chat.ID, bot.ChatActionUploadAudio)
 
 				// voice caption
 				if len(session.SelectedPreset) > 0 {
@@ -197,7 +199,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 				}
 
 				// upload voice
-				if sent := b.SendVoice(update.Message.Chat.Id, bot.InputFileFromBytes(data), options); sent.Ok {
+				if sent := b.SendVoice(update.Message.Chat.ID, bot.InputFileFromBytes(data), options); sent.Ok {
 					result = true
 				} else {
 					log.Printf("*** Failed to send photo: %s", *sent.Description)
@@ -206,7 +208,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 				log.Printf("*** Voice synthesis failed: %s", err)
 
 				message = fmt.Sprintf("Failed to synthesize voice: %s", err.Error())
-				b.SendMessage(update.Message.Chat.Id, message, options)
+				b.SendMessage(update.Message.Chat.ID, message, options)
 			}
 		} else {
 			switch {
@@ -238,14 +240,14 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 			}
 
 			// send message
-			if sent := b.SendMessage(update.Message.Chat.Id, message, options); sent.Ok {
+			if sent := b.SendMessage(update.Message.Chat.ID, message, options); sent.Ok {
 				result = true
 			} else {
 				log.Printf("*** Failed to send message: %s", *sent.Description)
 			}
 		}
 	} else {
-		log.Printf("*** Session does not exist for id: %s", userId)
+		log.Printf("*** Session does not exist for id: %s", userID)
 	}
 	pool.Unlock()
 
@@ -265,13 +267,13 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 		preset := strings.TrimSpace(strings.TrimPrefix(txt, commandChangePreset))
 
 		if _, exists := soxPresets[preset]; exists {
-			userId := *query.From.Username
-			if !isAvailableId(userId) {
-				log.Printf("*** Id not allowed: %s", userId)
+			userID := *query.From.Username
+			if !isAvailableID(userID) {
+				log.Printf("*** Id not allowed: %s", userID)
 			} else {
 				// change preset
-				pool.Sessions[userId] = session{
-					UserId:         userId,
+				pool.Sessions[userID] = session{
+					UserID:         userID,
 					SelectedPreset: preset,
 				}
 
@@ -288,11 +290,11 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 
 	if len(message) > 0 {
 		// answer callback query
-		if apiResult := b.AnswerCallbackQuery(query.Id, map[string]interface{}{"text": message}); apiResult.Ok {
+		if apiResult := b.AnswerCallbackQuery(query.ID, map[string]interface{}{"text": message}); apiResult.Ok {
 			// edit message and remove inline keyboards
 			options := map[string]interface{}{
-				"chat_id":    query.Message.Chat.Id,
-				"message_id": query.Message.MessageId,
+				"chat_id":    query.Message.Chat.ID,
+				"message_id": query.Message.MessageID,
 			}
 			if apiResult := b.EditMessageText(message, options); apiResult.Ok {
 				result = true
@@ -308,22 +310,23 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 }
 
 // synthesize voice from given file_id
-func synthesizeVoiceWithFileId(b *bot.Bot, fileId string, preset string) ([]byte, error) {
-	if f := b.GetFile(fileId); f.Ok {
-		if res, err := http.Get(b.GetFileUrl(*f.Result)); err == nil {
+func synthesizeVoiceWithFileID(b *bot.Bot, fileID string, preset string) ([]byte, error) {
+	f := b.GetFile(fileID)
+	if f.Ok {
+		res, err := http.Get(b.GetFileURL(*f.Result))
+		if err == nil {
 			defer res.Body.Close()
+
 			// get bytes of given voice file
-			if data, err := ioutil.ReadAll(res.Body); err == nil {
+			data, err := ioutil.ReadAll(res.Body)
+			if err == nil {
 				return soxConvert(data, preset)
-			} else {
-				return []byte{}, err
 			}
-		} else {
 			return []byte{}, err
 		}
-	} else {
-		return []byte{}, fmt.Errorf("Failed to get file: %s", *f.Description)
+		return []byte{}, err
 	}
+	return []byte{}, fmt.Errorf("Failed to get file: %s", *f.Description)
 }
 
 // convert given bytes using sox and preset
@@ -351,11 +354,11 @@ func soxConvert(original []byte, preset string) ([]byte, error) {
 	out, errs := &bytes.Buffer{}, &bytes.Buffer{}
 	cmd := exec.Command(soxPath, args...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = bytes.NewReader(original), out, errs
-	if err := cmd.Run(); err == nil {
+	err := cmd.Run()
+	if err == nil {
 		return out.Bytes(), nil
-	} else {
-		return []byte{}, fmt.Errorf("%s %s", string(out.Bytes()), string(errs.Bytes()))
 	}
+	return []byte{}, fmt.Errorf("%s %s", string(out.Bytes()), string(errs.Bytes()))
 }
 
 func main() {
